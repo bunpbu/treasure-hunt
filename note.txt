@@ -1,0 +1,3 @@
+https://10minutemail.net/address.api.php
+https://10minutemail.net/address.api.php?new=1
+https://10minutemail.net/readmail.html?mid=welcome

@@ -36,11 +36,21 @@ const run = async () => {
   for (let i = 1; i <= config.runs; i++) {
     const username: string = nanoid();
 
+    const getEmail = async () => {
+      const data: any = await request('https://10minutemail.net/address.api.php?new=1');
+      console.log(data);
+      if (data.mail_get_mail.length == 0) {
+        return "Loi";
+      } else {
+        return data.mail_get_mail;
+      }
+    };
+    const email = await retry(getEmail);
     if (!fs.existsSync(`${config.screenshotsDir}/${username}`)) fs.mkdirSync(`${config.screenshotsDir}/${username}`);
 
     console.log(`[${i}] Starting run`);
 
-    console.log(`[${i}] Email:`, username + '@emaildrop.io');
+    console.log(`[${i}] Email:`,email);
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -52,7 +62,7 @@ const run = async () => {
 
     await screenshot();
 
-    await page.type('#mat-input-0', `${username}@emaildrop.io`);
+    await page.type('#mat-input-0', `${email}`);
     await page.type('#mat-input-1', username);
     await page.type('#mat-input-2', config.password);
     await page.type('#mat-input-3', config.password);
@@ -69,18 +79,37 @@ const run = async () => {
 
     await screenshot();
 
-    const getOTP = async () => {
-      const data: any = await request('https://api.emaildrop.io/graphql', query, { username });
+    // const getOTP = async () => {
+    //   const data: any = await request('https://api.emaildrop.io/graphql', query, { username });
 
-      if (data.emails.length == 0) {
-        return await getOTP();
+    //   if (data.emails.length == 0) {
+    //     return await getOTP();
+    //   } else {
+    //     return regex.exec(data.emails[0].stripped_text.replaceAll(/\s/g, ''))[0];
+    //   }
+    // };
+
+    const getMailId = async () => {
+      const data: any = await request('https://10minutemail.net/address.api.php');
+
+      if (data.mail_list.length < 2) {
+        return await getMailId();
       } else {
-        return regex.exec(data.emails[0].stripped_text.replaceAll(/\s/g, ''))[0];
+        return data.mail_list[0].mail_id;
       }
     };
 
+    const mailId = await retry(getMailId);
+    console.log(`[${i}] Mail Id:`, mailId);
+
+    const getOTP = async () => {
+      const data: any = await request('https://10minutemail.net/readmail.html?mid=' + mailId);
+
+      console.log(data);
+    };
+
     const otp = await retry(getOTP);
-    console.log(`[${i}] Obtained OTP:`, otp);
+    console.log(`[${i}] Otp:`, otp);
 
     const nums = otp.split('');
     await page.type(`#verify-code-form > div:nth-child(1) > div:nth-child(1) > input`, nums[0]);
